@@ -15,6 +15,7 @@
 
 #if 1
 #   define trace(fmt, ...)
+    #undef min
 #else
 #   pragma message("enabled debug messages which compromise hard realtime")
 #   define trace(fmt, ...) fprintf(stderr, "[Bank Manager] " fmt "\n", ##__VA_ARGS__)

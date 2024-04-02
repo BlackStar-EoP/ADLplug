@@ -19,6 +19,8 @@
 #include "resources.h"
 #include <cassert>
 
+#undef min
+
 #if defined(ADLPLUG_OPL3)
 RESOURCE(Res, opl3_banks_pak);
 static const Res::Data &banks_pak = Res::opl3_banks_pak;

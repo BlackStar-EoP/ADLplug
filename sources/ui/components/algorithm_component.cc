@@ -35,75 +35,75 @@ void Algorithm_Component::paint(Graphics &g)
         bounds.setY(scale * row);
         bounds.setWidth(scale);
         bounds.setHeight(scale);
-
+        // UTF8 hardcoded is a stupid idea. Thanks for this!
         switch (character) {
-        case u'│':
+        case u'\x2502':  // u'│':
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.0f),
                                    bounds.getRelativePoint(0.5f, 1.0f)));
             break;
-        case u'─':
+        case u'\x2500': //u'─' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.0f, 0.5f),
                                    bounds.getRelativePoint(1.0f, 0.5f)));
             break;
-        case u'┌':
+        case u'\x250c': //u'┌' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 1.0f),
                                    bounds.getRelativePoint(0.5f, 0.5f)));
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.5f),
                                    bounds.getRelativePoint(1.0f, 0.5f)));
             break;
-        case u'┐':
+        case u'\x2510': //u'┐' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.0f, 0.5f),
                                    bounds.getRelativePoint(0.5f, 0.5f)));
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.5f),
                                    bounds.getRelativePoint(0.5f, 1.0f)));
             break;
-        case u'└':
+        case u'\x2514': // u'└' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.0f),
                                    bounds.getRelativePoint(0.5f, 0.5f)));
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.5f),
                                    bounds.getRelativePoint(1.0f, 0.5f)));
             break;
-        case u'┘':
+        case u'\x2518': // u'┘' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.0f, 0.5f),
                                    bounds.getRelativePoint(0.5f, 0.5f)));
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.5f),
                                    bounds.getRelativePoint(0.5f, 0.0f)));
             break;
-        case u'┤':
+        case u'\x2524': // u'┤' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.0f, 0.5f),
                                    bounds.getRelativePoint(0.5f, 0.5f)));
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.0f),
                                    bounds.getRelativePoint(0.5f, 1.0f)));
             break;
-        case u'├':
+        case u'\x251c': //u'├' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.5f),
                                    bounds.getRelativePoint(1.0f, 0.5f)));
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.0f),
                                    bounds.getRelativePoint(0.5f, 1.0f)));
             break;
-        case u'┴':
+        case u'\x2534': //u'┴' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.0f, 0.5f),
                                    bounds.getRelativePoint(1.0f, 0.5f)));
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.5f),
                                    bounds.getRelativePoint(0.5f, 0.0f)));
             break;
-        case u'┬':
+        case u'\x252c': //u'┬' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.0f, 0.5f),
                                    bounds.getRelativePoint(1.0f, 0.5f)));
             g.drawLine(Line<float>(bounds.getRelativePoint(0.5f, 0.5f),
                                    bounds.getRelativePoint(0.5f, 1.0f)));
             break;
-        case u'┼':
+        case u'\x253c': //u'┼' :
             g.setColour(pen_color);
             g.drawLine(Line<float>(bounds.getRelativePoint(0.0f, 0.5f),
                                    bounds.getRelativePoint(1.0f, 0.5f)));

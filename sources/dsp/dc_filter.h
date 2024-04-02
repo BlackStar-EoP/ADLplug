@@ -5,7 +5,9 @@
 
 #pragma once
 #include <math.h>
-
+#ifndef M_PI
+#define M_PI 3.14159265358979323846  // pi
+#endif
 struct Dc_Filter {
     void cutoff(double f);
     double process(double in);

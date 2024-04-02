@@ -8,6 +8,10 @@
 #include "ui/utility/knobman_skin.h"
 #include "JuceHeader.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846  // pi
+#endif
+
 class Knob : public Component,
              public AsyncUpdater,
              public SettableTooltipClient

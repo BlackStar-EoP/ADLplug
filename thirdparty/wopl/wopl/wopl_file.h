@@ -290,7 +290,6 @@ extern int WOPL_SaveInstToMem(WOPIFile *file, void *dest_mem, size_t length, uin
 }  // extern "C"
 #endif
 
-#if __cplusplus >= 201103L
 #include <memory>
 struct WOPLFile_Deleter
 {
@@ -298,6 +297,5 @@ struct WOPLFile_Deleter
         { WOPL_Free(file); }
 };
 typedef std::unique_ptr<WOPLFile, WOPLFile_Deleter> WOPLFile_Ptr;
-#endif
 
 #endif /* WOPL_FILE_H */
