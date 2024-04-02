@@ -68,7 +68,7 @@ public:
 
     void update_emulator_icon();
     void build_emulator_menu(PopupMenu &menu);
-    int select_emulator_by_menu();
+    void select_emulator_by_menu(std::function<void(int)> callback);
 
     void handle_load_bank(Component *clicked);
     void handle_save_bank(Component *clicked);
@@ -107,6 +107,7 @@ private:
     void get_master_volume_limits(
         const AudioParameterFloat &parameter,
         double &linmin, double &linmax, double &dbmin, double &dbmax) const;
+    void showOkCancelBoxAsync(MessageBoxIconType iconType, String title, String message, std::function<void(bool)> callback);
 
 protected:
     bool write_to_processor(

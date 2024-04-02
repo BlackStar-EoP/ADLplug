@@ -4,7 +4,7 @@
 //          http://www.boost.org/LICENSE_1_0.txt)
 
 #pragma once
-#include "AppConfig.h"
+//#include "AppConfig.h"
 
 #define ADLplug_Version JucePlugin_VersionString
 #define ADLplug_VersionFinal 1

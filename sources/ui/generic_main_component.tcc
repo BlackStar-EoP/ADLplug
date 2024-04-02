@@ -554,6 +554,25 @@ void Generic_Main_Component<T>::handle_edit_program()
     dlg_edit_program_ = dlgopts.launchAsync();
 }
 
+class CB : public ModalComponentManager::Callback {
+    std::function<void(bool)> cb;
+
+public:
+    CB(std::function<void(bool)> callback) : cb(callback) {
+    }
+
+    void modalStateFinished (int returnValue) override {
+        cb(returnValue);
+        delete this;
+    }
+};
+
+template <class T>
+void Generic_Main_Component<T>::showOkCancelBoxAsync(MessageBoxIconType iconType, String title, String message, std::function<void(bool)> callback) {
+    auto cb = new CB(callback);
+    AlertWindow::showOkCancelBox(iconType, title, message, "OK", "Cancel", nullptr, cb);
+}
+
 template <class T>
 void Generic_Main_Component<T>::handle_add_program()
 {
@@ -563,8 +582,7 @@ void Generic_Main_Component<T>::handle_add_program()
     menu.addSeparator();
     menu.addItem(3, "Delete bank");
     menu.addItem(4, "Delete all banks");
-    int selection = menu.showMenu(PopupMenu::Options()
-                                  .withParentComponent(this));
+    menu.showMenuAsync(PopupMenu::Options().withTargetComponent(this), [this](int selection) {
 
     unsigned part = midichannel_;
     uint32_t program = midiprogram_[part];
@@ -604,10 +622,10 @@ void Generic_Main_Component<T>::handle_add_program()
         break;
     }
     case 2: {
-        bool confirm = AlertWindow::showOkCancelBox(
+        showOkCancelBoxAsync(
             AlertWindow::QuestionIcon, "Delete program",
             fmt::format("Confirm deletion of program {:c}{:03d}?",
-                        percussive ? 'P' : 'M', program & 127));
+                        percussive ? 'P' : 'M', program & 127), [&](bool confirm) {
         if (confirm) {
             Messages::User::DeleteInstrument msg;
             msg.bank = bank;
@@ -615,13 +633,14 @@ void Generic_Main_Component<T>::handle_add_program()
             msg.notify_back = true;
             write_to_processor(msg.tag, &msg, sizeof(msg));
         }
+        });
         break;
     }
     case 3: {
-        bool confirm = AlertWindow::showOkCancelBox(
+        showOkCancelBoxAsync(
             AlertWindow::QuestionIcon, "Delete bank",
             fmt::format("Confirm deletion of bank {:03d}:{:03d}?",
-                        bank.msb, bank.lsb));
+                        bank.msb, bank.lsb), [&](bool confirm) {
         if (confirm) {
             Messages::User::DeleteBank msg;
             msg.bank = bank;
@@ -630,20 +649,23 @@ void Generic_Main_Component<T>::handle_add_program()
             msg.bank.percussive = !bank.percussive;
             write_to_processor(msg.tag, &msg, sizeof(msg));
         }
+        });
         break;
     }
     case 4: {
-        bool confirm = AlertWindow::showOkCancelBox(
+        showOkCancelBoxAsync(
             AlertWindow::QuestionIcon, "Delete all banks",
-            fmt::format("Confirm deletion of all banks?"));
+            fmt::format("Confirm deletion of all banks?"), [&](bool confirm){
         if (confirm) {
             Messages::User::ClearBanks msg;
             msg.notify_back = true;
             write_to_processor(msg.tag, &msg, sizeof(msg));
         }
+        });
         break;
     }
     }
+    });
 }
 
 template <class T>
@@ -735,15 +757,14 @@ void Generic_Main_Component<T>::build_emulator_menu(PopupMenu &menu)
 }
 
 template <class T>
-int Generic_Main_Component<T>::select_emulator_by_menu()
+void Generic_Main_Component<T>::select_emulator_by_menu(std::function<void(int)> callback)
 {
     PopupMenu menu;
     build_emulator_menu(menu);
     unsigned emulator = chip_settings_.emulator;
-    int selection = menu.showMenu(PopupMenu::Options()
+    menu.showMenuAsync(PopupMenu::Options()
                                   .withParentComponent(this)
-                                  .withItemThatMustBeVisible(emulator + 1));
-    return selection;
+                                  .withItemThatMustBeVisible(emulator + 1), callback);
 }
 
 template <class T>
@@ -779,26 +800,31 @@ void Generic_Main_Component<T>::handle_load_bank(Component *clicked)
         menu.addSubMenu("Load from collection", pak_submenu);
     }
 
-    int selection = menu.showAt(clicked);
+    menu.showMenuAsync(PopupMenu::Options()
+                               .withTargetComponent(clicked), [=](int selection) {
     if (selection == 1) {
-        FileChooser chooser(TRANS("Load bank..."), bank_directory_, bank_file_filter, prefer_native_file_dialog);
-        if (chooser.browseForFileToOpen()) {
+        auto chooser_ = new FileChooser(TRANS("Load bank..."), bank_directory_, bank_file_filter, prefer_native_file_dialog);
+        chooser_->launchAsync(FileBrowserComponent::FileChooserFlags::openMode | FileBrowserComponent::FileChooserFlags::canSelectFiles, [this,chooser_](const FileChooser& chooser) {
+        if (!chooser.getResults().isEmpty()) {
             File file = chooser.getResult();
             change_bank_directory(file.getParentDirectory());
             int format = 0;
             load_bank(file, format);
         }
+        delete chooser_;
+        });
     }
     else if (selection == 2) {
         int program_selection = self()->cb_program->getSelectedId();
         if (program_selection == 0) {
-            AlertWindow::showMessageBox(
+            AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon, TRANS("Load instrument..."), TRANS("Please select a program first."));
             return;
         }
 
-        FileChooser chooser(TRANS("Load instrument..."), bank_directory_, ins_file_filter, prefer_native_file_dialog);
-        if (chooser.browseForFileToOpen()) {
+        auto chooser_ = new FileChooser(TRANS("Load instrument..."), bank_directory_, ins_file_filter, prefer_native_file_dialog);
+        chooser_->launchAsync(FileBrowserComponent::FileChooserFlags::openMode | FileBrowserComponent::FileChooserFlags::canSelectFiles, [&,chooser_](const FileChooser& chooser) {
+        if (!chooser.getResults().isEmpty()) {
             File file = chooser.getResult();
             change_bank_directory(file.getParentDirectory());
             int format = 0;
@@ -808,6 +834,8 @@ void Generic_Main_Component<T>::handle_load_bank(Component *clicked)
 #endif
             load_single_instrument(program_selection - 1, file, format);
         }
+        delete chooser_;
+        });
     }
     else if (selection >= menu_index) {
         uint32_t index = selection - menu_index;
@@ -815,6 +843,7 @@ void Generic_Main_Component<T>::handle_load_bank(Component *clicked)
         std::string wopl = pak.extract(index);
         load_bank_mem((const uint8_t *)wopl.data(), wopl.size(), name, 0);
     }
+    });
 }
 
 template <class T>
@@ -830,6 +859,9 @@ void Generic_Main_Component<T>::handle_save_bank(Component *clicked)
     menu.addItem(menu_index++, "Save bank file...");
     menu.addItem(menu_index++, "Save instrument file...");
 
+#if true
+    auto overwrite_confirm = [](const File &file) { return true; };
+#else // FIXME: implement
     auto overwrite_confirm =
         [this](const File &file) {
             bool confirm = true;
@@ -844,14 +876,16 @@ void Generic_Main_Component<T>::handle_save_bank(Component *clicked)
             }
             return confirm;
         };
+#endif
 
-    int selection = menu.showAt(clicked);
+    menu.showMenuAsync(PopupMenu::Options()
+                               .withTargetComponent(clicked), [=](int selection){
     if (selection == 1) {
         File initial_file = bank_directory_.getChildFile(
             File::createLegalFileName(self()->edt_bank_name->getText()));
-        FileChooser chooser(TRANS("Save bank..."), initial_file, bank_file_filter, prefer_native_file_dialog);
-        if (!chooser.browseForFileToSave(false))
-            return;
+        auto chooser_ = new FileChooser(TRANS("Save bank..."), initial_file, bank_file_filter, prefer_native_file_dialog);
+        chooser_->launchAsync(FileBrowserComponent::FileChooserFlags::saveMode | FileBrowserComponent::FileChooserFlags::canSelectFiles, [&,chooser_](const FileChooser& chooser) {
+        if (!chooser.getResults().isEmpty()) {
 
         File file = chooser.getResult();
         file = file.withFileExtension(bank_file_extension);
@@ -860,18 +894,21 @@ void Generic_Main_Component<T>::handle_save_bank(Component *clicked)
             change_bank_directory(file.getParentDirectory());
             save_bank(file);
         }
+        }
+        delete chooser_;
+        });
     }
     else if (selection == 2) {
         int program_selection = self()->cb_program->getSelectedId();
         if (program_selection == 0) {
-            AlertWindow::showMessageBox(
+            AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon, TRANS("Save instrument..."), TRANS("Please select a program first."));
             return;
         }
 
-        FileChooser chooser(TRANS("Save instrument..."), bank_directory_, ins_file_filter, prefer_native_file_dialog);
-        if (!chooser.browseForFileToSave(false))
-            return;
+        auto chooser_ = new FileChooser(TRANS("Save instrument..."), bank_directory_, ins_file_filter, prefer_native_file_dialog);
+        chooser_->launchAsync(FileBrowserComponent::FileChooserFlags::saveMode | FileBrowserComponent::FileChooserFlags::canSelectFiles, [&,chooser_](const FileChooser& chooser) {
+        if (!chooser.getResults().isEmpty()) {
 
         File file = chooser.getResult();
         file = file.withFileExtension(ins_file_extension);
@@ -880,7 +917,11 @@ void Generic_Main_Component<T>::handle_save_bank(Component *clicked)
             change_bank_directory(file.getParentDirectory());
             save_single_instrument(program_selection - 1, file);
         }
+        }
+        delete chooser_;
+        });
     }
+    });
 }
 
 template <class T>
@@ -895,20 +936,20 @@ void Generic_Main_Component<T>::load_bank(const File &file, int format)
     const char *error_title = "Error loading bank";
 
     if (stream->failedToOpen()) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The file could not be opened.");
         return;
     }
 
     if ((length = stream->getTotalLength()) >= max_length) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The selected file is too large to be valid.");
         return;
     }
 
     filedata.reset(new uint8_t[length]);
     if (stream->read(filedata.get(), length) != length) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The input operation has failed.");
         return;
     }
@@ -928,20 +969,20 @@ void Generic_Main_Component<T>::load_single_instrument(uint32_t program, const F
     const char *error_title = "Error loading instrument";
 
     if (stream->failedToOpen()) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The file could not be opened.");
         return;
     }
 
     if ((length = stream->getTotalLength()) >= max_length) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The selected file is too large to be valid.");
         return;
     }
 
     filedata.reset(new uint8_t[length]);
     if (stream->read(filedata.get(), length) != length) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The input operation has failed.");
         return;
     }
@@ -961,7 +1002,7 @@ void Generic_Main_Component<T>::load_bank_mem(const uint8_t *mem, size_t length,
     default: {
         WOPx::BankFile_Ptr wopl(WOPx::LoadBankFromMem((void *)mem, length, nullptr));
         if (!wopl) {
-            AlertWindow::showMessageBox(
+            AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon, error_title, "The input file is not in " WOPx_BANK_FORMAT " format.");
             return;
         }
@@ -1034,7 +1075,7 @@ void Generic_Main_Component<T>::load_single_instrument_mem(uint32_t program, con
     default: {
         WOPx::InstrumentFile wopi = {};
         if (WOPx::LoadInstFromMem(&wopi, (void *)mem, length) != 0) {
-            AlertWindow::showMessageBox(
+            AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon, error_title, "The input file is not in " WOPx_INST_FORMAT " format.");
             return;
         }
@@ -1045,7 +1086,7 @@ void Generic_Main_Component<T>::load_single_instrument_mem(uint32_t program, con
     case 1:
         ins = Instrument::from_sbi(mem, length);
         if (ins.blank()) {
-            AlertWindow::showMessageBox(
+            AlertWindow::showMessageBoxAsync(
                 AlertWindow::WarningIcon, error_title, "The input file is not in SBI format.");
             return;
         }
@@ -1143,7 +1184,7 @@ void Generic_Main_Component<T>::save_bank(const File &file)
     const char *error_title = "Error saving bank";
 
     if (WOPx::SaveBankToMem(&wopl, filedata.get(), filesize, wopl.version, 0) != 0) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The bank could not be converted to " WOPx_BANK_FORMAT ".");
         return;
     }
@@ -1151,7 +1192,7 @@ void Generic_Main_Component<T>::save_bank(const File &file)
     std::unique_ptr<FileOutputStream> stream(file.createOutputStream());
 
     if (stream->failedToOpen()) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The file could not be opened.");
         return;
     }
@@ -1162,7 +1203,7 @@ void Generic_Main_Component<T>::save_bank(const File &file)
     stream->flush();
 
     if (!stream->getStatus()) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The output operation has failed.");
         return;
     }
@@ -1193,7 +1234,7 @@ void Generic_Main_Component<T>::save_single_instrument(uint32_t program, const F
     const char *error_title = "Error saving instrument";
 
     if (WOPx::SaveInstToMem(&opli, filedata.get(), filesize, opli.version) != 0) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The bank could not be converted to " WOPx_INST_FORMAT ".");
         return;
     }
@@ -1201,7 +1242,7 @@ void Generic_Main_Component<T>::save_single_instrument(uint32_t program, const F
     std::unique_ptr<FileOutputStream> stream(file.createOutputStream());
 
     if (stream->failedToOpen()) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The file could not be opened.");
         return;
     }
@@ -1212,7 +1253,7 @@ void Generic_Main_Component<T>::save_single_instrument(uint32_t program, const F
     stream->flush();
 
     if (!stream->getStatus()) {
-        AlertWindow::showMessageBox(
+        AlertWindow::showMessageBoxAsync(
             AlertWindow::WarningIcon, error_title, "The output operation has failed.");
         return;
     }
@@ -1224,11 +1265,12 @@ void Generic_Main_Component<T>::handle_change_keymap()
     Midi_Keyboard_Ex &kb = *self()->midi_kb;
     PopupMenu menu;
     build_key_layout_menu(menu, last_key_layout_);
-    int selection = menu.showMenu(PopupMenu::Options()
-                                  .withParentComponent(this));
+    menu.showMenuAsync(PopupMenu::Options()
+                                  .withTargetComponent(this), [this,&kb](int selection) {
     if (selection != 0)
         last_key_layout_ = set_key_layout(kb, (Key_Layout)(selection - 1), *conf_);
     kb.grabKeyboardFocus();
+    });
 }
 
 template <class T>

@@ -1041,13 +1041,14 @@ void Main_Component::buttonClicked (Button* buttonThatWasClicked)
     else if (buttonThatWasClicked == btn_emulator.get())
     {
         //[UserButtonCode_btn_emulator] -- add your button handler code here..
-        int selection = select_emulator_by_menu();
+        select_emulator_by_menu([&](int selection) {
         if (selection != 0 && (unsigned)(selection - 1) != chip_settings_.emulator) {
             AudioParameterChoice &p = *pb.p_emulator;
             p.beginChangeGesture();
             p = selection - 1;
             p.endChangeGesture();
         }
+        });
         //[/UserButtonCode_btn_emulator]
     }
     else if (buttonThatWasClicked == btn_algo_help.get())
