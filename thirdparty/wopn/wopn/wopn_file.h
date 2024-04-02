@@ -258,7 +258,6 @@ extern int WOPN_SaveInstToMem(OPNIFile *file, void *dest_mem, size_t length, uin
 }
 #endif
 
-#if __cplusplus >= 201103L
 #include <memory>
 struct WOPNFile_Deleter
 {
@@ -266,6 +265,5 @@ struct WOPNFile_Deleter
         { WOPN_Free(file); }
 };
 typedef std::unique_ptr<WOPNFile, WOPNFile_Deleter> WOPNFile_Ptr;
-#endif
 
 #endif /* WOPN_FILE_H */

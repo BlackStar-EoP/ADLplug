@@ -96,13 +96,15 @@ void Parameter_Block::setup_parameters(AudioProcessorEx &p)
             part.p_drumnote = add_internal_parameter<Pt::Int>(p, tag, id("drumnote"), name("Percussion note"), 0, 127, ins.percussion_key_number, String());
         }
 
+        const char *ops[] = {"c1", "m1", "c2", "m2"};
+        const char *opnames[] = {"Carrier 1", "Modulator 1", "Carrier 2", "Modulator 2"};
         for (unsigned opnum = 0; opnum < 4; ++opnum) {
             String idprefix = fmt::format(
                 "P{:d}{:s}", pn + 1,
-                ((const char *[]){ "c1", "m1", "c2", "m2" })[opnum]);
+                ops[opnum]);
             String nameprefix = fmt::format(
                 "[Part {:d}] {:s} ", pn + 1,
-                ((const char *[]){ "Carrier 1", "Modulator 1", "Carrier 2", "Modulator 2" })[opnum]);
+                opnames[opnum]);
 
             auto id = [idprefix](const char *x) -> String { return idprefix + String(x); };
             auto name = [nameprefix](const char *x) -> String { return nameprefix + String(x); };
